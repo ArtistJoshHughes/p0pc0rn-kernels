@@ -1,0 +1,103 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0
+     Copyright 2026 Joshua Hughes
+     This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+     with this file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>p0pc0rn kernels: benchmark</title>
+<style>
+  :root { --bg: #fbfaf7; --fg: #1d1b18; --muted: #6b665d; --line: #e4e0d8; --panel: #f2efe8; --accent: #b4531f; --on-accent: #fff; --ok: #1f7a3a; --bad: #b42318; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161513; --fg: #ece9e3; --muted: #a29d93; --line: #2d2b27; --panel: #1f1d1a; --accent: #f08a4b; --on-accent: #1d1b18; --ok: #5cc27a; --bad: #ff7a6b; color-scheme: dark; } }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; display: grid; gap: 14px; }
+  h1 { font-size: 20px; margin: 0; } h2 { font-size: 15px; margin: 6px 0 0; } p { margin: 0; color: var(--muted); max-width: 70ch; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); cursor: pointer; }
+  button.quiet { background: transparent; color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: default; } button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  #step { color: var(--muted); }
+  .wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; } th { color: var(--muted); font-weight: 600; } td.n { text-align: right; white-space: nowrap; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .best { font-weight: 650; }
+  #share { display: none; gap: 10px; padding: 14px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
+  #share.open { display: grid; }
+  pre { margin: 0; max-height: 280px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>p0pc0rn kernels: benchmark</h1>
+  <p>Runs the kernels at the sizes the p0pc0rn picture and clip models use. <b>Benchmark</b> times each new kernel next to the one it replaced (a few minutes). <b>Tune for this device</b> tries several settings of each kernel, checks each against the default's output, and finds the fastest here (5–15 minutes). Both warm the device up.</p>
+  <div class="row">
+    <button id="bench" type="button">Benchmark</button>
+    <button id="tune" type="button">Tune for this device</button>
+    <button id="shareBtn" class="quiet" type="button" disabled>Share results…</button>
+    <button id="save" class="quiet" type="button" disabled>Save (JSON)</button>
+    <span id="step" role="status"></span>
+  </div>
+  <p id="dev"></p>
+  <section id="share" aria-labelledby="shareTitle">
+    <h2 id="shareTitle">Share these results</h2>
+    <p>Sharing opens a new post in the repository's Benchmarks discussions on GitHub, filled in with exactly the text below: your GPU's type and limits, your operating system, your browser's name and version, the date and the timings. Nothing is published unless you post it; opening GitHub passes this text to GitHub in the link, and you can edit it or close the page there. Posting needs a GitHub account and shows its name.</p>
+    <pre id="preview"></pre>
+    <div class="row"><button id="post" type="button">Open GitHub to post</button><button id="copy" class="quiet" type="button">Copy text</button><button id="close" class="quiet" type="button">Close</button></div>
+  </section>
+  <div class="wrap"><table><thead id="head"></thead><tbody id="rows"></tbody></table></div>
+  <p id="canary"></p>
+</main>
+<script type="module">
+import { createGpu, calibrate, defaultTune } from '../src/index.js';
+import { runBench } from './bench.js';
+import { runSweep } from './sweep.js';
+import { report, discussion, discussionUrl } from './share.js';
+const out = window.__results = { done: false, device: null, results: [], error: null };
+const $ = (id) => document.getElementById(id), q = new URLSearchParams(location.search), esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+let gpu = null, bench = null, sweep = null, canary = null;
+const busy = (b) => { for (const id of ['bench', 'tune']) $(id).disabled = b; $('shareBtn').disabled = b || !(bench || sweep); $('save').disabled = $('shareBtn').disabled; };
+async function device() {
+  if (gpu) return gpu;
+  gpu = await createGpu({ powerPreference: q.get('power') || 'high-performance' }); defaultTune(gpu); out.calib = await calibrate(gpu);
+  out.device = gpu.describe ? gpu.describe() : null; $('dev').textContent = 'GPU: ' + [gpu.info && gpu.info.vendor, gpu.info && gpu.info.architecture, gpu.info && gpu.info.description].filter(Boolean).join(' / ');
+  return gpu;
+}
+async function doBench() {
+  busy(true); out.done = false;
+  try {
+    const r = await runBench(await device(), { rounds: +(q.get('rounds') || 5), onStep: (s) => { $('step').textContent = s; } });
+    bench = r.results; canary = r.canary; out.results = bench; out.canary = canary;
+    $('head').innerHTML = '<tr><th>Kernel</th><th>Case</th><th class="n">ms</th><th class="n">GFLOP/s</th></tr>';
+    $('rows').innerHTML = bench.map((x) => `<tr><td>${esc(x.group)}</td><td>${esc(x.name)}</td><td class="n">${x.ms}</td><td class="n">${x.gflops}</td></tr>`).join('');
+    $('canary').textContent = `Canary: ${canary.startGflops} GFLOP/s at the start, ${canary.endGflops} at the end (a big drop means the device got hot).`;
+    $('step').textContent = 'Benchmark done';
+  } catch (e) { out.error = String((e && (e.stack || e.message)) || e); $('step').textContent = 'Error: ' + out.error; }
+  busy(false); out.done = true;
+}
+async function doTune() {
+  busy(true); out.done = false;
+  try {
+    sweep = await runSweep(await device(), { rounds: +(q.get('rounds') || 3), only: q.get('only') || '', onStep: (s) => { $('step').textContent = s; } });
+    out.sweep = sweep; out.results = sweep.flatMap((f) => f.settings.map((s) => ({ name: `${f.key}: ${s.label}`, ok: s.ok ? true : null, gflops: s.gflops,
+      note: s.ok ? (f.best && f.best.label === s.label ? 'fastest' : '') : 'rejected: ' + (s.error || 'output differs' + (s.rel != null ? ` (rel ${s.rel})` : '')) })));
+    $('head').innerHTML = '<tr><th>Kernel</th><th>Setting</th><th class="n">ms</th><th class="n">GFLOP/s</th><th>Check</th></tr>';
+    $('rows').innerHTML = sweep.map((f) => f.settings.map((s, i) => `<tr class="${f.best && f.best.label === s.label ? 'best' : ''}"><td>${i ? '' : esc(f.name)}</td><td>${esc(s.label)}${i ? '' : ' (default)'}</td>` +
+      `<td class="n">${s.ms ?? ''}</td><td class="n">${s.gflops ?? ''}</td><td class="${s.ok ? 'ok' : 'bad'}">${s.ok ? 'matches' : 'differs'}</td></tr>`).join('')).join('');
+    $('canary').textContent = sweep.map((f) => `${f.key}: fastest is ${f.best ? `${f.best.label}, ×${f.best.speedup} vs the default` : 'none'}`).join(' · ');
+    $('step').textContent = 'Tuning done';
+  } catch (e) { out.error = String((e && (e.stack || e.message)) || e); $('step').textContent = 'Error: ' + out.error; }
+  busy(false); out.done = true;
+}
+const current = () => discussion(report(gpu, { bench, sweep, canary }));
+$('bench').addEventListener('click', doBench);
+$('tune').addEventListener('click', doTune);
+$('shareBtn').addEventListener('click', () => { $('preview').textContent = current().body; $('share').classList.add('open'); $('post').focus(); });
+$('post').addEventListener('click', () => { window.open(discussionUrl(current()), '_blank', 'noopener'); });
+$('copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(current().body); $('copy').textContent = 'Copied'; } catch (e) { $('copy').textContent = 'Copy failed'; } });
+$('close').addEventListener('click', () => { $('share').classList.remove('open'); $('shareBtn').focus(); });
+$('save').addEventListener('click', () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(report(gpu, { bench, sweep, canary }), null, 1)], { type: 'application/json' })); a.download = 'kernel-results.json'; a.click(); });
+if (q.get('auto') === '1') (q.get('sweep') === '1' ? doTune() : doBench());
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0
+     Copyright 2026 Joshua Hughes
+     This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+     with this file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>p0pc0rn kernels</title>
+<meta name="description" content="WebGPU kernels for image, video and language models in the browser, tuned on iPhone. Run the benchmark on your own device.">
+<style>
+  :root { --bg: #fbfaf7; --fg: #1d1b18; --muted: #6b665d; --line: #e4e0d8; --accent: #b4531f; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161513; --fg: #ece9e3; --muted: #a29d93; --line: #2d2b27; --accent: #f08a4b; color-scheme: dark; } }
+  body { margin: 0; padding: 32px 16px; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; } p { margin: 0; color: var(--muted); }
+  a { color: var(--accent); } nav { display: grid; gap: 10px; }
+  nav a { display: block; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--fg); }
+  nav a b { color: var(--accent); } nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>p0pc0rn kernels</h1>
+  <p>WebGPU kernels for running image, video and language models in a browser, tuned on an iPhone. They are the kernels inside <a href="https://artistjoshhughes.github.io/p0pc0rn/">p0pc0rn</a>.</p>
+  <nav>
+    <a href="bench/"><b>Benchmark and tune</b><br>Time the kernels on this device and find its fastest settings; share the results if you like.</a>
+    <a href="test/"><b>Correctness tests</b><br>Check every kernel against a CPU reference on this device.</a>
+  </nav>
+  <p>Needs a browser with WebGPU: Safari 26 on iPhone, iPad and Mac, or Chrome and Edge. Nothing is sent anywhere unless you choose to share.</p>
+</main>
+</body>
+</html>

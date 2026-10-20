@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0
+     Copyright 2026 Joshua Hughes
+     This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+     with this file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>p0pc0rn kernels: tests</title>
+<style>
+  :root { --bg: #fbfaf7; --fg: #1d1b18; --muted: #6b665d; --line: #e4e0d8; --ok: #1f7a3a; --bad: #b42318; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161513; --fg: #ece9e3; --muted: #a29d93; --line: #2d2b27; --ok: #5cc27a; --bad: #ff7a6b; color-scheme: dark; } }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; } p { margin: 0 0 12px; color: var(--muted); }
+  .wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; } th { color: var(--muted); font-weight: 600; }
+  .ok { color: var(--ok); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; } code { font: 12px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<h1>p0pc0rn kernels: correctness tests</h1>
+<p id="dev">Starting the GPU…</p>
+<div class="wrap"><table><thead><tr><th>Test</th><th>Result</th><th>Cosine</th><th>Max error</th><th>Note</th></tr></thead><tbody id="rows"></tbody></table></div>
+<p id="sum"></p>
+<script type="module">
+import { createGpu, calibrate, defaultTune } from '../src/index.js';
+import { run, count } from './kernels.test.js';
+const out = window.__results = { done: false, ok: false, device: null, results: [], error: null };
+const $ = (id) => document.getElementById(id), esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+try {
+  const gpu = await createGpu({ powerPreference: new URLSearchParams(location.search).get('power') || 'high-performance' });
+  defaultTune(gpu); out.calib = await calibrate(gpu);
+  out.device = gpu.describe ? gpu.describe() : null;
+  $('dev').textContent = 'Device: ' + JSON.stringify(out.device || {}) + ' · ' + count() + ' tests';
+  for await (const r of run(gpu)) {
+    out.results.push(r);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(r.name)}</td><td class="${r.ok ? 'ok' : 'bad'}">${r.ok ? 'pass' : 'FAIL'}</td><td>${r.cos != null ? r.cos.toFixed(6) : ''}</td>` +
+      `<td>${r.maxErr != null ? r.maxErr.toExponential(2) : ''}</td><td><code>${esc(r.error || r.note || '')}</code></td>`;
+    $('rows').appendChild(tr);
+  }
+  const bad = out.results.filter((r) => !r.ok).length;
+  out.ok = bad === 0; $('sum').textContent = bad ? `${bad} of ${out.results.length} failed` : `All ${out.results.length} passed`;
+} catch (e) { out.error = String((e && (e.stack || e.message)) || e); $('sum').textContent = 'Error: ' + out.error; }
+out.done = true;
+</script>
+</body>
+</html>

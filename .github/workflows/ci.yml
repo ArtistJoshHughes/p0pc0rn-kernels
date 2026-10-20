@@ -1,0 +1,20 @@
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # scripts parse, licence headers, exports, shader generation, the converter's 37 checks
+      - run: npm run check
+      # the TypeScript declarations compile (strict) and match the README's calls
+      - run: npm install --no-save --no-audit --no-fund typescript@5.9.3 @webgpu/types@0.1.66
+      - run: npx tsc -p types/tsconfig.json
+      # The GPU tests (npm test) need a real GPU; hosted runners have none, so they run locally.

@@ -1,0 +1,72 @@
+{
+  "name": "p0pc0rn-kernels",
+  "version": "0.1.0",
+  "description": "WebGPU compute kernels for image, video and language models in the browser: GEMM with in-kernel 4/8-bit dequantisation, flash attention, 3D convolution. Tuned on iPhone.",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./core/*": "./src/core/*",
+    "./ops/*": "./src/ops/*"
+  },
+  "bin": {
+    "p0pc0rn-convert": "./tools/convert.mjs"
+  },
+  "files": [
+    "src",
+    "tools",
+    "types/index.d.ts",
+    "docs",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "check": "node scripts/check.mjs && node test/convert.test.mjs",
+    "test": "node test/run.mjs",
+    "bench": "node test/run.mjs --page \"bench/index.html?auto=1\" --timeout 1800",
+    "convert": "node tools/convert.mjs",
+    "check:types": "tsc -p types/tsconfig.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@webgpu/types": ">=0.1.40"
+  },
+  "peerDependenciesMeta": {
+    "@webgpu/types": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "webgpu",
+    "wgsl",
+    "gpu",
+    "kernels",
+    "gemm",
+    "matmul",
+    "flash-attention",
+    "attention",
+    "convolution",
+    "quantization",
+    "int4",
+    "diffusion",
+    "llm",
+    "mobile",
+    "iphone",
+    "safari"
+  ],
+  "author": "Joshua Hughes",
+  "license": "MPL-2.0",
+  "homepage": "https://artistjoshhughes.github.io/p0pc0rn-kernels/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArtistJoshHughes/p0pc0rn-kernels.git"
+  }
+}
