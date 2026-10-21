@@ -35,18 +35,20 @@ The clip timings also include the app's time-chunked decoder, which uses `conv3`
 - A browser with WebGPU and the `shader-f16` feature: Safari 26 on iPhone, iPad and Mac, Chrome or Edge on desktop and Android.
 - The phone-tuned attention needs 32 KB of workgroup memory. On devices with less, `attention()` and `attn256()` keep using the standard kernels.
 
-## Install
+## Use it
 
-```sh
-npm install p0pc0rn-kernels
+There is nothing to install. The kernels are plain ES modules with no dependencies, so a web page can import them straight from this repository's site:
+
+```js
+import { createGpu, gemm } from 'https://artistjoshhughes.github.io/p0pc0rn-kernels/src/index.js';
 ```
 
-Or copy `src/` into your project: it is plain ES modules with no dependencies. TypeScript declarations ship in `types/index.d.ts`; they use WebGPU's types from [`@webgpu/types`](https://www.npmjs.com/package/@webgpu/types).
+The site serves the main branch, so it changes whenever the repository does. To keep a fixed version, download the repository (**Code → Download ZIP**) and copy `src/` into your project. TypeScript declarations are in the repository's `types/index.d.ts`; they use WebGPU's types from [`@webgpu/types`](https://www.npmjs.com/package/@webgpu/types).
 
 ## Quick start
 
 ```js
-import { createGpu, defaultTune, calibrate, gemm, toF16, fromF16 } from 'p0pc0rn-kernels';
+import { createGpu, defaultTune, calibrate, gemm, toF16, fromF16 } from 'https://artistjoshhughes.github.io/p0pc0rn-kernels/src/index.js';
 
 const gpu = await createGpu();      // WebGPU device with shader-f16
 defaultTune(gpu);                    // fp16 partial sums, phone-tuned attention where it fits
@@ -65,10 +67,10 @@ Every op is called as `op(gpu, args)`. The argument objects are typed in `types/
 
 ## Converting a model
 
-The converter turns safetensors files (F32, F16, BF16 or FP8) into the kernels' encodings. A model larger than memory converts too, because tensors stream in blocks.
+The converter turns safetensors files (F32, F16, BF16 or FP8) into the kernels' encodings. A model larger than memory converts too, because tensors stream in blocks. It runs with Node 22 or later in a copy of this repository:
 
 ```sh
-npx p0pc0rn-convert path/to/model --out model-q4 --bits 4    # or: node tools/convert.mjs ...
+node tools/convert.mjs path/to/model --out model-q4 --bits 4
 ```
 
 - Matrices that fit 64-row tiles become 4-bit (`--bits 8` gives 8-bit, `--bits 16` fp16), and everything else becomes fp16.
@@ -79,7 +81,7 @@ npx p0pc0rn-convert path/to/model --out model-q4 --bits 4    # or: node tools/co
 In the page, load the result and pass tensors straight to the ops:
 
 ```js
-import { loadWeights, gemm } from 'p0pc0rn-kernels';
+import { loadWeights, gemm } from 'https://artistjoshhughes.github.io/p0pc0rn-kernels/src/index.js';
 const model = await loadWeights(gpu, 'https://example.com/model-q4/');
 gemm(gpu, { w: model.tensor('model.layers.0.mlp.up_proj.weight'), x, y, M, N, K });
 ```
